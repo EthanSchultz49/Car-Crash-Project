@@ -1,12 +1,5 @@
-# Final Group Project: Car Crash Analysis
+# Car Crash Analysis
 
-**Team 1: Car Crash Analysis**  
-*Will Kapner, David Greco, Ryan Neely, Ethan Schultz*  
-*GSB 530 Data Analytics and Mining, California Polytechnic State University*  
-*Dr. Leida Chen*  
-*9 December 2024*
-
----
 
 ## **Project Overview**
 The goal of this project was to identify key factors contributing to severe car crashes and provide insights to improve road safety and reduce fatalities. We focused on analyzing a dataset of traffic accidents with variables such as accident severity, crash type, violations, weather, and time-related factors.
@@ -27,7 +20,7 @@ The dataset includes several key variables:
 - **Weather and Daylight**: Weather conditions and whether it was daylight or not
 - **Time Factors**: Weekday, Month
 
-We conducted exploratory data analysis (EDA) and visualizations to identify trends and correlations in the data.
+We conducted exploratory data analysis and visualizations to identify trends and correlations in the data.
 
 ## **Data Preparation**
 Data preparation included the following steps:
