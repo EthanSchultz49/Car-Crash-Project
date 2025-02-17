@@ -1,0 +1,252 @@
+---
+title: "Car Crash Project"
+author: "Ethan Schultz"
+date: "2024-11-26"
+output: html_document
+---
+
+Reading in the data and preparing predictor variables for analysis and visualization
+```{r}
+library(readxl)
+library(ggplot2)
+data <- read_xlsx("/Users/ethanschultz/Downloads/Big_Data_Files (1).xlsx", sheet = "Car Crash")
+data$CrashType <- as.numeric(factor(data$CrashType, levels = c("A", "B", "C", "D", "E", "F", "G")))
+data$CrashType <- factor(data$CrashType)
+data$ViolCat <- factor(data$ViolCat)
+```
+
+Initial Data Exploration
+
+```{r}
+# Count occurrences of each class in Severity
+table(data$Severity)
+
+```
+
+Made a function for plotting to easily see the number of crashes in the different categories
+
+```{r}
+create_barplot <- function(data, var_name) {
+  var_summary <- table(data[[var_name]])
+  
+  ggplot(data = as.data.frame(var_summary), aes(x = Var1, y = Freq)) +
+    geom_bar(stat = "identity", fill = "steelblue") +
+    labs(
+      title = paste("Number of Crashes by", var_name),
+      x = var_name,
+      y = "Count"
+    ) +
+    theme_minimal()
+}
+```
+
+```{r}
+severity <- data[data$Severity == 1, ]
+```
+
+```{r}
+head(severity)
+```
+
+
+```{r}
+
+severity$CrashTypes <- factor(severity$CrashType,
+                         levels = c(1, 2, 3, 4, 5, 6, 7),
+                         labels = c("Head-on", "Sideswipe", "Rear End", 
+                                    "Broadside", "Hit Object", "Overturned", 
+                                    "Vehicle/Pedestrian"))
+
+ggplot(severity, aes(x = CrashTypes, fill = factor(Severity))) +
+  geom_bar(position = "dodge") +
+  labs(title = "Counts of Crash Type by Severity", 
+       x = "Crash Type", 
+       y = "Count", 
+       fill = "Severity") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+```{r}
+ggplot(severity, aes(x = CrashType, fill = Severity)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Counts of Crash Type by Severity", 
+       x = "Crash Type", 
+       y = "Count")+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+```{r}
+create_barplot(data,"CrashType")
+```
+
+```{r}
+create_barplot(data,"ViolCat")
+```
+
+```{r}
+
+severity$ViolCats <- factor(severity$ViolCat,
+                         levels = c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11),
+                         labels = c("DUI/BUI", "Unsafe Speed", "Following too Closely", 
+                                    "Improper Passing", "Unsafe Lane Chnage", "Improper Turning", 
+                                    "Automobile Right of Way","Pedestrian Right of Way","Pedestrian Violation","Traffic Signals and Signs", "Fell Asleep"))
+
+ggplot(severity, aes(x = ViolCats, fill = factor(Severity))) +
+  geom_bar(position = "dodge") +
+  labs(title = "Counts of Violation Categories by Severity", 
+       x = "Violation Type", 
+       y = "Count")+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+
+```{r}
+create_barplot(data,"Weekday")
+```
+
+```{r}
+create_barplot(data,"Severity")
+```
+
+```{r}
+create_barplot(data,"ClearWeather")
+```
+
+```{r}
+create_barplot(severity,"Highway")
+```
+
+```{r}
+create_barplot(data,"Month")
+```
+
+
+After visually exploring the data first model was a logistic model to see how each predictor affected the severity of car crashes
+
+Logistic model to predict severity
+```{r}
+model <- glm(Severity ~ ViolCat + ClearWeather + CrashType + Highway + Daylight + Highway*CrashType ,family = binomial ,data=data)
+summary(model)
+```
+
+
+Necessary Packages for next model
+```{r}
+suppressWarnings(RNGversion("3.5.3"))
+library(caret)
+library(klaR)
+library(gains)
+library(pROC)
+library(dplyr)
+```
+
+
+Next model was a Naive Bayes
+
+Naive Bayes
+
+Addressing data imbalance challenges by oversampling
+```{r}
+library(ROSE)
+
+set.seed(1)
+over <- ovun.sample(Severity ~ ., data = data1, method = "both", N = nrow(data1))$data
+
+table(over$Severity)
+head(over)
+
+```
+
+```{r}
+data1 <-data[, !(names(data) %in% c("ID", "County", "City"))]
+
+over$Severity <- as.factor(over$Severity)
+set.seed(1)
+myIndex<- createDataPartition(over$Severity, p=0.6, list=FALSE)
+trainSet <- over[myIndex,]
+validationSet <- over[-myIndex,]
+myCtrl <- trainControl(method="cv", number=10)
+set.seed(1)
+nb_fit <- train(Severity ~., data = trainSet, method = "nb", trControl = myCtrl, tuneGrid = data.frame(fL = 0, usekernel = FALSE, adjust = 1))
+nb_fit
+nb_class <- predict(nb_fit, newdata = validationSet)
+confusionMatrix(nb_class, validationSet$Severity, positive = '1')
+```
+
+
+Also tried undersampeling for comparison
+```{r}
+under <- ovun.sample(Severity~., data=data1, method = "under", N = 15836)$data
+table(under$Severity)
+```
+
+```{r}
+
+under$Severity <- as.factor(under$Severity)
+set.seed(1)
+myIndex<- createDataPartition(under$Severity, p=0.6, list=FALSE)
+trainSet <- under[myIndex,]
+validationSet <- under[-myIndex,]
+myCtrl <- trainControl(method="cv", number=10)
+set.seed(1)
+nb_fit <- train(Severity ~., data = trainSet, method = "nb", trControl = myCtrl, tuneGrid = data.frame(fL = 0, usekernel = FALSE, adjust = 1))
+nb_fit
+nb_class <- predict(nb_fit, newdata = validationSet)
+confusionMatrix(nb_class, validationSet$Severity, positive = '1')
+```
+
+Running into crazy amount of warnings when running because of the class imbalance in the data set there is significantly non-severe cases than severe cases in the data set. Still a lot of warnings but much less after I did the tuneGrid = ...
+
+
+
+
+Association Rule Analysis to see common combinations of patters with different predictors
+```{r}
+library(arules)
+library(arulesViz)
+
+data2 <- data[, c("Severity", "ViolCat", "ClearWeather", "Highway", "Daylight")]
+
+# Convert variables to factors if they're not already
+data2$Severity <- as.factor(data2$Severity)
+data2$ViolCat <- as.factor(data2$ViolCat)
+data2$ClearWeather <- as.factor(data2$ClearWeather)
+data2$CrashType <- as.factor(data2$CrashType)
+data2$Highway <- as.factor(data2$Highway)
+data2$Daylight <- as.factor(data2$Daylight)
+
+transactions <- as(data2, "transactions")
+rules <- apriori(transactions, parameter = list(support = 0.1, confidence = 0.5, minlen = 2))
+srules <- sort(rules, by="lift", decreasing = TRUE)
+inspect(srules)
+plot(rules)
+```
+
+
+```{r}
+data3 <- data[, c("Severity", "ClearWeather", "CrashType", "Highway", "Daylight")]
+
+# Convert variables to factors if they're not already
+data3$Severity <- as.factor(data3$Severity)
+data3$ClearWeather <- as.factor(data3$ClearWeather)
+data3$CrashType <- as.factor(data3$CrashType)
+data3$Highway <- as.factor(data3$Highway)
+data3$Daylight <- as.factor(data3$Daylight)
+
+transactions <- as(data3, "transactions")
+rules <- apriori(transactions, parameter = list(support = 0.1, confidence = 0.05, minlen = 2))
+srules <- sort(rules, by="lift", decreasing = TRUE)
+inspect(srules)
+plot(rules)
+
+rules_severity <- subset(rules, rhs %pin% "Severity")
+
+rules_severity <- subset(rules_severity, confidence > 0.05)
+
+inspect(rules_severity)
+
+plot(rules_severity, method = "graph", engine = "htmlwidget")
+
+```
+
