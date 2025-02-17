@@ -50,7 +50,6 @@ These insights can help in improving traffic safety, prioritizing emergency resp
 ## **Tools and Technologies**
 - R (for data analysis, visualization, and modeling)
 - Logistic Regression, Naive Bayes, Decision Trees, Random Forest, KNN
-- Data Preprocessing with Pandas and Scikit-learn
 
 ## **Key Insights and Recommendations**
 - Focus law enforcement on high-risk behaviors such as DUI and speeding, particularly on highways.
